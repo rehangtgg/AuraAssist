@@ -1,11 +1,624 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>SmartRisk FX | Kalkulator Risiko Trading</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLMDJdZ0uR4BqR3C10W+VfR3d9x0G7g/uYI1/C8N8n+G8+R12X4uQyK7B/k7P7w==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        /* CSS Khusus - Dark Mode Modern */
+        :root {
+            --primary-bg: #1e1e2d;
+            --secondary-bg: #27293d;
+            --text-color: #ffffff;
+            --accent-color: #00bcd4; /* Biru/Cyan untuk fokus */
+            --safe-color: #28a745;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+        }
+        body {
+            background-color: var(--primary-bg);
+            color: var(--text-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .navbar, .card, .form-control, .list-group-item {
+            background-color: var(--secondary-bg);
+            border: none;
+            color: var(--text-color);
+        }
+        .form-control {
+            border: 1px solid #3a3f5b;
+        }
+        .form-control:focus {
+            background-color: var(--secondary-bg);
+            color: var(--text-color);
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 0.25rem rgba(0, 188, 212, 0.25);
+        }
+        .btn-primary {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+        }
+        .btn-primary:hover {
+            background-color: #00a0b0;
+            border-color: #00a0b0;
+        }
+        .risk-indicator {
+            padding: 8px;
+            border-radius: 5px;
+            font-weight: bold;
+            text-align: center;
+        }
+        .risk-indicator.safe { background-color: var(--safe-color); }
+        .risk-indicator.moderate { background-color: var(--warning-color); color: #212529; }
+        .risk-indicator.risky { background-color: var(--danger-color); }
+        .edu-tip { cursor: help; color: var(--accent-color); margin-left: 5px; }
+        .highlight { color: var(--warning-color); font-weight: bold; }
+
+        .risk-table th, .risk-table td {
+            background-color: #313349;
+            border-color: #444766;
+            color: var(--text-color);
+        }
+        .table-agresif { background-color: rgba(220, 53, 69, 0.4) !important; }
+        .table-moderat { background-color: rgba(255, 193, 7, 0.4) !important; }
+        .table-konservatif { background-color: rgba(40, 167, 69, 0.4) !important; }
+    </style>
 </head>
 <body>
-<p>RehanGTGG</p>
+
+    <div id="auth-area" class="container mt-5" style="max-width: 450px; display: none;">
+        <h2 class="text-center mb-4 text-light">SmartRisk FX</h2>
+        <div id="login-form-container"></div>
+        <div id="register-form-container" style="display: none;"></div>
+        <p class="text-center mt-3">
+            <a href="#" id="toggle-auth-link" class="text-secondary">Belum punya akun? Daftar</a>
+        </p>
+    </div>
+
+    <div id="main-app-dashboard" class="container-fluid p-3" style="display: none;">
+        <nav class="navbar navbar-expand-lg rounded shadow mb-4">
+            <div class="container-fluid">
+                <a class="navbar-brand text-light" href="#">📈 SmartRisk FX</a>
+                <div class="d-flex">
+                    <span id="welcome-user" class="navbar-text me-3 text-light"></span>
+                    <button id="logout-btn" class="btn btn-sm btn-outline-danger" type="button">
+                        <i class="fas fa-sign-out-alt"></i> Keluar
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <div class="row">
+            <div class="col-lg-7 mb-4">
+                <div class="card p-4 shadow">
+                    <h4 class="card-title text-light mb-4"><i class="fas fa-hand-holding-usd"></i> Kalkulator Lot Size Realistis</h4>
+                    <form id="risk-calculator-form">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="modal" class="form-label">Modal Akun</label>
+                                    <input type="number" class="form-control" id="modal" value="1000" min="10" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="risk-percent" class="form-label">Risiko per Trade (%)</label>
+                                    <input type="number" class="form-control" id="risk-percent" value="1.0" min="0.1" max="10.0" step="0.1" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="currency" class="form-label">Mata Uang Akun</label>
+                                    <select class="form-select" id="currency">
+                                        <option value="USD">USD - Dolar AS</option>
+                                        <option value="EUR">EUR - Euro</option>
+                                        <option value="JPY">JPY - Yen Jepang</option>
+                                        <option value="GBP">GBP - Pound Sterling</option>
+                                        <option value="AUD">AUD - Dolar Australia</option>
+                                        <option value="CAD">CAD - Dolar Kanada</option>
+                                        <option value="CHF">CHF - Franc Swiss</option>
+                                        <option value="SGD">SGD - Dolar Singapura</option>
+                                        <option value="IDR">IDR - Rupiah Indonesia</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="pair" class="form-label">Pair Trading <span class="edu-tip" data-bs-toggle="tooltip" title="Pilih mata uang dasar (Base Currency) dari pair yang Anda tradingkan.">?</span></label>
+                                    <select class="form-select" id="pair">
+                                        <option value="USD">USD/XXX</option>
+                                        <option value="JPY">JPY/XXX</option>
+                                        <option value="EUR">EUR/XXX</option>
+                                        <option value="GBP">GBP/XXX</option>
+                                        <option value="AUD">AUD/XXX</option>
+                                        <option value="CAD">CAD/XXX</option>
+                                        <option value="CHF">CHF/XXX</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="stop-loss-pips" class="form-label">Stop Loss (SL) Pips/Poins</label>
+                            <input type="number" class="form-control" id="stop-loss-pips" value="30" min="1" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="atr-pips" class="form-label">Analisis Volatilitas (ATR Pips)</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="atr-pips" value="80" min="1">
+                                <button type="button" class="btn btn-secondary" id="suggest-sl-btn" title="Sarankan SL berdasarkan ATR">
+                                    <i class="fas fa-lightbulb"></i> Saran SL
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="risk-reward-ratio" class="form-label">Risk/Reward Ratio (RRR)</label>
+                            <input type="number" class="form-control" id="risk-reward-ratio" value="2" min="1" step="0.1" required>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary w-100 mt-3">
+                            <i class="fas fa-cogs"></i> Hitung & Analisis Risiko
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="col-lg-5 mb-4">
+                <div class="card p-4 shadow mb-4">
+                    <h5 class="text-light mb-3"><i class="fas fa-tachometer-alt"></i> Dashboard Risiko</h5>
+                    <div id="risk-indicator" class="risk-indicator safe mb-3">AMAN</div>
+                    <div id="result-display">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span>Risiko Uang (Konversi USD):</span>
+                            <strong id="risk-amount-result" class="text-danger">0.00</strong>
+                        </div>
+                        <div class="d-flex justify-content-between mb-1">
+                            <span>Lot Size Ideal:</span>
+                            <strong id="lot-size-result" class="highlight">0.00</strong>
+                        </div>
+                        <div class="d-flex justify-content-between mb-1">
+                            <span>Target Profit (TP) Pips:</span>
+                            <strong id="tp-pips-result" class="text-success">0 Pips</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card p-4 shadow mb-4">
+                    <h5 class="text-light mb-3"><i class="fas fa-chart-line"></i> Simulasi Skenario (RRR 1:<span id="rr-display">2</span>)</h5>
+                    <ul class="list-group">
+                        <li class="list-group-item bg-dark text-light border-success mb-2">
+                            Best Case (TP): <strong id="best-case-result" class="text-success">+ $0.00</strong>
+                        </li>
+                        <li class="list-group-item bg-dark text-light border-warning mb-2">
+                            Normal Case (Breakeven): <strong class="text-info">+/- $0.00</strong>
+                        </li>
+                        <li class="list-group-item bg-dark text-light border-danger">
+                            Worst Case (SL): <strong id="worst-case-result" class="text-danger">- $0.00</strong>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-7 mb-4">
+                <div class="card p-4 shadow">
+                    <h5 class="text-light mb-3"><i class="fas fa-shield-alt"></i> Tabel Rekomendasi Manajemen Risiko</h5>
+                    <table class="table risk-table table-borderless">
+                        <thead>
+                            <tr>
+                                <th>Profil</th>
+                                <th>Risiko (%)</th>
+                                <th>Risiko Maks. Drawdown</th>
+                                <th>Rekomendasi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="table-konservatif">
+                                <td>Konservatif</td>
+                                <td>< 1.0%</td>
+                                <td>< 10%</td>
+                                <td>Pemula/Modal Besar. Jaga ketenangan.</td>
+                            </tr>
+                            <tr class="table-moderat">
+                                <td>Moderat</td>
+                                <td>1.0% - 3.0%</td>
+                                <td>10% - 20%</td>
+                                <td>Trader berpengalaman. Imbal hasil seimbang.</td>
+                            </tr>
+                            <tr class="table-agresif">
+                                <td>Agresif</td>
+                                <td>> 3.0%</td>
+                                <td>> 20%</td>
+                                <td>Modal kecil/resiko tinggi. Tidak disarankan.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="col-lg-5 mb-4">
+                <div class="card p-4 shadow">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="text-light mb-0"><i class="fas fa-history"></i> Riwayat Perhitungan</h5>
+                        <button class="btn btn-sm btn-outline-secondary" id="clear-history-btn" title="Hapus semua riwayat"><i class="fas fa-trash"></i> Hapus</button>
+                    </div>
+                    <ul class="list-group" id="calculation-history">
+                        <li class="list-group-item bg-secondary text-white-50">Belum ada riwayat.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- 1. KONSTANTA & UTILITY ---
+            
+            // Fiksasi Nilai Tukar ke USD untuk Demo
+            const EXCHANGE_RATES_TO_USD = {
+                'USD': 1.0,      // $1 = $1
+                'EUR': 1.08,     // €1 = $1.08
+                'JPY': 0.0068,   // ¥1 = $0.0068 (1 USD = ~147 JPY)
+                'GBP': 1.25,     // £1 = $1.25
+                'AUD': 0.66,     // A$1 = $0.66
+                'CAD': 0.73,     // C$1 = $0.73
+                'CHF': 1.12,     // CHF1 = $1.12
+                'SGD': 0.74,     // S$1 = $0.74
+                'IDR': 0.000064, // Rp1 = $0.000064 (1 USD = ~Rp15,600)
+            };
+            
+            // Fiksasi Nilai Pip/Lot (Nilai 1 Lot Standar/100K Unit dalam USD)
+            const BASE_PIP_VALUES_USD = {
+                'USD': 10.0, // Pair Major dengan USD di depan (USD/CAD) atau belakang (EUR/USD)
+                'EUR': 10.0,
+                'JPY': 9.5,  // Diperkirakan
+                'GBP': 10.0,
+                'AUD': 10.0,
+                'CAD': 10.0,
+                'CHF': 10.0,
+            };
+
+            const getStoredUsers = () => JSON.parse(localStorage.getItem('smartrisk_users')) || [];
+            const setStoredUsers = (users) => localStorage.setItem('smartrisk_users', JSON.stringify(users));
+            const getCurrentUser = () => JSON.parse(sessionStorage.getItem('smartrisk_session')) || null;
+            const setCurrentUser = (user) => sessionStorage.setItem('smartrisk_session', JSON.stringify(user));
+            const removeCurrentUser = () => sessionStorage.removeItem('smartrisk_session');
+            
+            const simpleHash = (password) => {
+                let hash = 0;
+                if (password.length === 0) return hash;
+                for (let i = 0; i < password.length; i++) {
+                    const char = password.charCodeAt(i);
+                    hash = ((hash << 5) - hash) + char;
+                    hash |= 0;
+                }
+                return hash.toString();
+            };
+
+            // Menyesuaikan label/placeholder Modal berdasarkan Mata Uang
+            document.getElementById('currency').addEventListener('change', (e) => {
+                const currency = e.target.value;
+                const modalInput = document.getElementById('modal');
+                
+                const formatModalPlaceholder = (code, example) => {
+                    modalInput.placeholder = `Contoh: ${example} (${code})`;
+                    // Atur nilai default yang masuk akal
+                    if (code === 'IDR') {
+                         modalInput.value = '15000000';
+                    } else if (code === 'JPY') {
+                         modalInput.value = '100000';
+                    } else {
+                         modalInput.value = '1000';
+                    }
+                };
+
+                switch (currency) {
+                    case 'IDR': formatModalPlaceholder('IDR', '15000000'); break;
+                    case 'JPY': formatModalPlaceholder('JPY', '100000'); break;
+                    case 'EUR': formatModalPlaceholder('EUR', '950'); break;
+                    case 'GBP': formatModalPlaceholder('GBP', '800'); break;
+                    default: formatModalPlaceholder('USD', '1000'); break;
+                }
+            });
+
+            // --- AUTH LOGIC (Pengembangan Ulang Kode Auth agar tetap di bawah) ---
+            const toggleAuthLink = document.getElementById('toggle-auth-link');
+            const loginC = document.getElementById('login-form-container');
+            const registerC = document.getElementById('register-form-container');
+
+            const renderAuthForms = () => {
+                loginC.innerHTML = `
+                    <div class="card p-4 shadow"><h4 class="text-light mb-3">Masuk</h4><form id="login-form">
+                    <div class="mb-3"><label for="login-email" class="form-label">Email</label><input type="email" class="form-control" id="login-email" required></div>
+                    <div class="mb-3"><label for="login-password" class="form-label">Password</label><input type="password" class="form-control" id="login-password" minlength="6" required></div>
+                    <div class="mb-3 form-check"><input type="checkbox" class="form-check-input" id="remember-me"><label class="form-check-label" for="remember-me">Ingat Saya</label></div>
+                    <button type="submit" class="btn btn-primary w-100">Login</button></form></div>
+                `;
+                registerC.innerHTML = `
+                    <div class="card p-4 shadow"><h4 class="text-light mb-3">Daftar Akun Baru</h4><form id="register-form">
+                    <div class="mb-3"><label for="register-name" class="form-label">Nama</label><input type="text" class="form-control" id="register-name" required></div>
+                    <div class="mb-3"><label for="register-email" class="form-label">Email</label><input type="email" class="form-control" id="register-email" required></div>
+                    <div class="mb-3"><label for="register-password" class="form-label">Password (Min. 6 Karakter)</label><input type="password" class="form-control" id="register-password" minlength="6" required></div>
+                    <button type="submit" class="btn btn-primary w-100">Daftar</button></form></div>
+                `;
+            };
+
+            const handleRegister = (e) => {
+                e.preventDefault();
+                const name = document.getElementById('register-name').value.trim();
+                const email = document.getElementById('register-email').value.trim();
+                const password = document.getElementById('register-password').value;
+
+                if (password.length < 6) { alert('Password minimal 6 karakter!'); return; }
+                const users = getStoredUsers();
+                if (users.find(u => u.email === email)) { alert('Email sudah terdaftar!'); return; }
+
+                users.push({ name, email, password: simpleHash(password), history: [] });
+                setStoredUsers(users);
+                alert('Pendaftaran Berhasil! Silakan masuk.');
+                toggleAuthLink.click();
+            };
+
+            const handleLogin = (e) => {
+                e.preventDefault();
+                const email = document.getElementById('login-email').value.trim();
+                const password = document.getElementById('login-password').value;
+                const rememberMe = document.getElementById('remember-me').checked;
+                const users = getStoredUsers();
+                const user = users.find(u => u.email === email && u.password === simpleHash(password));
+
+                if (user) {
+                    const sessionUser = { name: user.name, email: user.email }; 
+                    if (rememberMe) { localStorage.setItem('smartrisk_remembered_user', JSON.stringify(sessionUser)); }
+                    setCurrentUser(sessionUser);
+                    alert(`Selamat datang, ${user.name}!`);
+                    checkAuthAndRenderApp();
+                } else { alert('Email atau Password salah.'); }
+            };
+
+            const handleLogout = () => {
+                removeCurrentUser();
+                localStorage.removeItem('smartrisk_remembered_user');
+                checkAuthAndRenderApp();
+            };
+            
+            if (toggleAuthLink) toggleAuthLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (loginC.style.display !== 'none') {
+                    loginC.style.display = 'none'; registerC.style.display = 'block'; toggleAuthLink.textContent = 'Sudah punya akun? Masuk';
+                } else {
+                    loginC.style.display = 'block'; registerC.style.display = 'none'; toggleAuthLink.textContent = 'Belum punya akun? Daftar';
+                }
+            });
+
+            // --- 2. LOGIC KALKULATOR GLOBAL ---
+
+            const convertModalToUSD = (modalAmount, currency) => {
+                const rate = EXCHANGE_RATES_TO_USD[currency] || 1.0;
+                return modalAmount * rate;
+            };
+
+            const calculateLotSize = (modal, riskPercent, slPips, pairBase, currency) => {
+                if (modal <= 0 || riskPercent <= 0 || slPips <= 0) {
+                    return { riskAmountUSD: 0, lotSize: 0 };
+                }
+
+                // 1. Konversi Modal ke USD (Mata Uang Basis Trading)
+                const modalUSD = convertModalToUSD(modal, currency);
+
+                // 2. Hitung Risiko Uang dalam USD
+                const riskAmountUSD = modalUSD * (riskPercent / 100);
+
+                // 3. Hitung Nilai per Pip yang Diizinkan (dalam USD)
+                const allowedPipValueUSD = riskAmountUSD / slPips;
+
+                // 4. Hitung Lot Size (Berdasarkan Nilai Pip per Lot Standar)
+                // Jika pairBase tidak ada, fallback ke USD 10.0
+                const basePipValueUSD = BASE_PIP_VALUES_USD[pairBase] || 10.0;
+                const lotSize = allowedPipValueUSD / basePipValueUSD;
+                
+                // Pembulatan ke 2 desimal (micro lot)
+                const finalLotSize = Math.floor(lotSize * 100) / 100;
+
+                return {
+                    riskAmountUSD: riskAmountUSD.toFixed(2),
+                    lotSize: finalLotSize.toFixed(2),
+                };
+            };
+            
+            const updateRiskIndicator = (riskPercent) => {
+                const indicator = document.getElementById('risk-indicator');
+                indicator.classList.remove('safe', 'moderate', 'risky');
+
+                let statusText = '';
+                if (riskPercent < 1.0) {
+                    indicator.classList.add('safe');
+                    statusText = 'KONSERVATIF (Risiko Rendah)';
+                } else if (riskPercent >= 1.0 && riskPercent <= 3.0) {
+                    indicator.classList.add('moderate');
+                    statusText = 'MODERAT (Risiko Ideal)';
+                } else {
+                    indicator.classList.add('risky');
+                    statusText = 'AGRESIF / BERISIKO TINGGI';
+                    alert(`⚠️ PERINGATAN RISIKO TINGGI: Risiko per trade Anda (${riskPercent}%) melebihi batas aman (3%). Jaga modal Anda!`);
+                }
+                indicator.textContent = statusText;
+            };
+
+            const handleCalculation = (e) => {
+                e.preventDefault();
+                
+                const modal = parseFloat(document.getElementById('modal').value);
+                const riskPercent = parseFloat(document.getElementById('risk-percent').value);
+                const slPips = parseFloat(document.getElementById('stop-loss-pips').value);
+                const pairBase = document.getElementById('pair').value;
+                const currency = document.getElementById('currency').value;
+                const rrr = parseFloat(document.getElementById('risk-reward-ratio').value);
+
+                if (isNaN(modal) || isNaN(riskPercent) || isNaN(slPips) || isNaN(rrr) || modal <= 0 || riskPercent <= 0 || slPips <= 0 || rrr < 1) {
+                     alert('Pastikan semua input diisi dengan angka positif.');
+                     return;
+                }
+                
+                // Hitung
+                const result = calculateLotSize(modal, riskPercent, slPips, pairBase, currency);
+                const riskAmountUSD = parseFloat(result.riskAmountUSD);
+
+                // Simulasi Skenario
+                const tpPips = slPips * rrr;
+                const rewardAmountUSD = riskAmountUSD * rrr;
+                
+                // Tampilkan Hasil
+                const riskNative = riskAmountUSD / (EXCHANGE_RATES_TO_USD[currency] || 1.0);
+                const riskDisplay = currency === 'USD' ? `$${result.riskAmountUSD}` : `${currency} ${riskNative.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+
+                document.getElementById('risk-amount-result').textContent = `$${result.riskAmountUSD} (${riskDisplay})`;
+                document.getElementById('lot-size-result').textContent = result.lotSize;
+                document.getElementById('tp-pips-result').textContent = `${tpPips.toFixed(0)} Pips`;
+                document.getElementById('rr-display').textContent = rrr.toFixed(1);
+                
+                // Tampilkan Simulasi
+                document.getElementById('best-case-result').textContent = `+ $${rewardAmountUSD.toFixed(2)}`;
+                document.getElementById('worst-case-result').textContent = `- $${riskAmountUSD.toFixed(2)}`;
+                
+                // Update Traffic Light
+                updateRiskIndicator(riskPercent);
+
+                // Simpan Riwayat
+                saveHistory({
+                    time: new Date().toLocaleString(),
+                    modal: modal,
+                    currency: currency,
+                    riskPercent: riskPercent,
+                    slPips: slPips,
+                    lotSize: result.lotSize,
+                    rrr: rrr
+                });
+            };
+
+            const handleSuggestSL = () => {
+                const atrPips = parseFloat(document.getElementById('atr-pips').value);
+                if (isNaN(atrPips) || atrPips <= 0) {
+                    alert('Masukkan nilai ATR yang valid.');
+                    return;
+                }
+                
+                const suggestedSL = Math.round(atrPips * 0.5);
+                document.getElementById('stop-loss-pips').value = suggestedSL;
+                alert(`Saran SL berdasarkan ATR (${atrPips} Pips) adalah ${suggestedSL} Pips.`);
+            };
+
+            const saveHistory = (calculation) => {
+                const currentUser = getCurrentUser();
+                if (!currentUser) return;
+
+                const users = getStoredUsers();
+                const userIndex = users.findIndex(u => u.email === currentUser.email);
+                
+                if (userIndex !== -1) {
+                    const userHistory = users[userIndex].history || [];
+                    userHistory.unshift(calculation);
+                    users[userIndex].history = userHistory.slice(0, 10);
+                    setStoredUsers(users);
+                    renderHistory();
+                }
+            };
+            
+            const renderHistory = () => {
+                const historyList = document.getElementById('calculation-history');
+                const currentUser = getCurrentUser();
+                historyList.innerHTML = '';
+
+                if (!currentUser) {
+                    historyList.innerHTML = `<li class="list-group-item bg-secondary text-white-50">Silakan login untuk melihat riwayat.</li>`;
+                    return;
+                }
+
+                const users = getStoredUsers();
+                const user = users.find(u => u.email === currentUser.email);
+                const history = user ? user.history || [] : [];
+
+                if (history.length === 0) {
+                    historyList.innerHTML = `<li class="list-group-item bg-secondary text-white-50">Belum ada riwayat perhitungan.</li>`;
+                    return;
+                }
+
+                history.forEach(item => {
+                    const listItem = document.createElement('li');
+                    listItem.className = 'list-group-item bg-dark text-light border-secondary mb-1 p-2 rounded';
+                    // Formatting mata uang asli (native currency)
+                    const formattedModal = `${item.currency} ${item.modal.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+                    
+                    listItem.innerHTML = `
+                        <small class="text-secondary">${item.time}</small><br>
+                        Modal: <strong>${formattedModal}</strong>, Risiko: <strong>${item.riskPercent}%</strong><br>
+                        SL: <strong>${item.slPips} Pips</strong>, RRR: <strong>1:${item.rrr}</strong><br>
+                        Lot Ideal: <strong class="text-warning">${item.lotSize}</strong>
+                    `;
+                    historyList.appendChild(listItem);
+                });
+            };
+
+            // --- 3. INITIALIZATION & AUTH CHECK ---
+
+            const checkAuthAndRenderApp = () => {
+                const user = getCurrentUser() || JSON.parse(localStorage.getItem('smartrisk_remembered_user'));
+                const authArea = document.getElementById('auth-area');
+                const mainApp = document.getElementById('main-app-dashboard');
+
+                if (user) {
+                    authArea.style.display = 'none';
+                    mainApp.style.display = 'block';
+                    document.getElementById('welcome-user').textContent = `Halo, ${user.name || user.email}!`;
+                    
+                    renderHistory();
+
+                    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+                    tooltipTriggerList.map(function (tooltipTriggerEl) {
+                        return new bootstrap.Tooltip(tooltipTriggerEl);
+                    });
+
+                    document.getElementById('logout-btn').onclick = handleLogout;
+                    const formLogin = document.getElementById('login-form');
+                    const formRegister = document.getElementById('register-form');
+                    if (formLogin) formLogin.onsubmit = handleLogin;
+                    if (formRegister) formRegister.onsubmit = handleRegister;
+
+                    document.getElementById('risk-calculator-form').onsubmit = handleCalculation;
+                    document.getElementById('suggest-sl-btn').onclick = handleSuggestSL;
+                    document.getElementById('clear-history-btn').onclick = () => {
+                        const currentUser = getCurrentUser();
+                        if (!currentUser) return;
+                        const users = getStoredUsers();
+                        const userIndex = users.findIndex(u => u.email === currentUser.email);
+                        if (userIndex !== -1) {
+                            users[userIndex].history = [];
+                            setStoredUsers(users);
+                            renderHistory();
+                            alert('Riwayat perhitungan telah dihapus.');
+                        }
+                    };
+                    
+                    // Panggil sekali untuk menyesuaikan placeholder/nilai awal
+                    document.getElementById('currency').dispatchEvent(new Event('change'));
+
+                } else {
+                    authArea.style.display = 'block';
+                    mainApp.style.display = 'none';
+                    renderAuthForms();
+                    
+                    const formLogin = document.getElementById('login-form');
+                    const formRegister = document.getElementById('register-form');
+                    if (formLogin) formLogin.onsubmit = handleLogin;
+                    if (formRegister) formRegister.onsubmit = handleRegister;
+                }
+            };
+
+            checkAuthAndRenderApp();
+        });
+    </script>
 </body>
 </html>
